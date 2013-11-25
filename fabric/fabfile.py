@@ -23,19 +23,20 @@ def step00():
         #cmd += ' echo \"{k}\" >> /root/.ssh/authorized_keys'.format(k=key)
         #run(cmd)
 
+    # Attention: After getting a new switch, I no longer have this problem
     # So the kickstart with an LACP bond wasn't working. I've taken to simply using
     # balance-rr in the kickstart config and then changing it to an 802.3ad bond here
-    bondconf = '/etc/sysconfig/network-scripts/ifcfg-bond0'
-    cmd = 'grep balance-rr {b} > /dev/null 2>&1; if [ $? -eq 0 ]; then '.format(
-        b=bondconf)
-    cmd += ' touch /tmp/.bondchanged;'
-    cmd += ' sed -i "s/balance-rr/4 miimon=100 lacp_rate=1/g" {b};'.format(
-        b=bondconf)
-    cmd += ' fi'
-    run(cmd) 
-    run('if [ -f /tmp/.bondchanged ]; then \
-        ifdown bond0 && ifup bond0; rm -f /tmp/.bondchanged; fi')
-    run(cmd)
+    # bondconf = '/etc/sysconfig/network-scripts/ifcfg-bond0'
+    # cmd = 'grep balance-rr {b} > /dev/null 2>&1; if [ $? -eq 0 ]; then '.format(
+    #     b=bondconf)
+    # cmd += ' touch /tmp/.bondchanged;'
+    # cmd += ' sed -i "s/balance-rr/4 miimon=100 lacp_rate=1/g" {b};'.format(
+    #     b=bondconf)
+    # cmd += ' fi'
+    # run(cmd) 
+    # run('if [ -f /tmp/.bondchanged ]; then \
+    #     ifdown bond0 && ifup bond0; rm -f /tmp/.bondchanged; fi')
+    # run(cmd)
     run('uname -a;ifconfig bond0')
 
 def step01():
