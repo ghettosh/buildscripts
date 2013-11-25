@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+. ./configure.sh
+
+# This script needs refactoring - but essentially setnet.sh needs
+# to run on all remote hypervisors; it builds the bridges and assigns
+# IPs to the gluster interface.
+
+echo "INFO: Sending the script to the remote hosts"
+
+for h in `cat ./hypervisors.txt`; do
+   scp setnet.sh root@${h}:/tmp &
+done
+
+echo "INFO: Configuring bridges, setting IPs"
+
+_pssh "[ -x /tmp/setnet.sh ] && /tmp/setnet.sh"

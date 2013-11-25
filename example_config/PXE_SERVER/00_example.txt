@@ -1,0 +1,146 @@
+PXE Server Example
+==================
+
+
+This example assumes you have xinetd.d and tftpd installed, along with nginx. This also assumes that the PXE server is
+172.16.0.17
+
+
+TFTPD
+=====
+
+
+    $ cat tftp 
+    service tftp
+    {
+        socket_type     = dgram
+        protocol        = udp
+        wait            = yes
+        user            = root
+        server          = /usr/sbin/in.tftpd
+        server_args     = -s /var/lib/tftpboot
+        disable         = no
+        per_source      = 11
+        cps         = 100 2
+        flags           = IPv4
+    }
+
+
+PXE
+===
+
+minimal directory structure:
+
+    $ tree /var/lib/tftpboot/
+    /var/lib/tftpboot/
+    └── pxelinux
+        ├── CentOS
+        │   ├── initrd.img
+        │   ├── TRANS.TBL
+        │   └── vmlinuz
+        ├── pxelinux.0
+        ├── pxelinux.cfg
+        │   └── default
+        └── vesamenu.c32
+    
+    11 directories, 25 files
+
+minimal /var/lib/tftpboot/pxelinux/pxelinux.cfg/default
+
+    $ cat default 
+    default vesamenu.c32
+    prompt 0
+    timeout 50 
+    
+    display boot.msg
+    
+    label CentOS64 - kickstart
+            menu default
+            kernel CentOS/vmlinuz
+            append load_ramdisk=1 ksdevice=eth0 initrd=CentOS/initrd.img network ks=http://172.16.0.17:9999/simple.ks
+
+
+KICKSTART FILES
+===============
+
+nginx configuration:
+
+    # cat /etc/nginx/conf.d/centos-serve.conf 
+    server {
+        listen       9999;
+        location / {
+            root        /home/centos-media;
+            autoindex   on;
+        }
+    }
+
+/home/centos-media contains everything you find on the CentOS DVDs and a super simple kickstart configuration:
+The reason I did not use a mirror was beacuse saturating your internet connection due to builds kind of sucks.
+Might as well saturate it for a short amount of time during a yum update.
+
+    $ cat simple.ks 
+    install
+    url --url http://172.16.0.17:9999/CentOS-6.4-x86_64
+    lang en_US.UTF-8
+    keyboard us
+    
+    network --onboot yes --device eth0 --bootproto dhcp --noipv6
+    # network --onboot no --device eth1 --bootproto dhcp --noipv6
+    # network --onboot no --device eth2 --bootproto dhcp --noipv6
+    
+    # this password is welcome1
+    rootpw  --iscrypted $6$z9IDMJLZOYVA6.Pd$5zmDlOdO04vyJX1OQmYBS9x06zrICufZB1USIDAStMGBLHjwU7akCx75PMo15VWVTY1m4ZJBCJ9A6f3UPswMU/
+    firewall --disabled
+    authconfig --enableshadow --passalgo=sha512
+    selinux --disabled
+    timezone --utc America/Denver
+    
+    zerombr
+    clearpart --all --initlabel
+    
+    bootloader --location=mbr --driveorder=sda --append="crashkernel=auto rhgb quiet"
+    
+    part /boot --fstype=ext4 --size=500
+    part pv.008002 --size=1 --grow
+    
+    volgroup vg_root --pesize=4096 pv.008002
+    
+    logvol swap --name=lv_swap --vgname=vg_root --size=4096
+    logvol / --fstype=ext4 --name=lv_root --vgname=vg_root --size=1 --grow
+    
+    %packages --nobase
+    @core
+    wget
+    python
+    createrepo
+    screen
+    bridge-utils
+    git
+    vim
+    qemu-kvm 
+    libvirt 
+    python-virtinst
+    createrepo
+    %end
+     
+    reboot
+
+
+for your reference, /home/centos-media looks like this:
+
+    $ ls -l
+    total 5669724
+    drwxr-xr-x 1 root root        382 Oct 11 13:09 CentOS-6.4-x86_64
+    -rw-rw-r-- 1 root root 4353378304 Mar  5  2013 CentOS-6.4-x86_64-bin-DVD1.iso
+    -rw-rw-r-- 1 root root 1452388352 Mar  5  2013 CentOS-6.4-x86_64-bin-DVD2.iso
+    -rw-r--r-- 1 root root        388 May 16  2013 md5sum.txt
+    -rw-r--r-- 1 root root       1271 May 16 08:43 md5sum.txt.asc
+    -rw-r--r-- 1 root root        436 May 16  2013 sha1sum.txt
+    -rw-r--r-- 1 root root       1319 May 16 08:43 sha1sum.txt.asc
+    -rw-r--r-- 1 root root        580 May 16  2013 sha256sum.txt
+    -rw-r--r-- 1 root root       1463 May 16 08:43 sha256sum.txt.asc
+    -rw-r--r-- 1 root root       1104 Nov  4 19:33 simple.ks
+
+
+
+

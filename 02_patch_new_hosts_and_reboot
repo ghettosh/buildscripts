@@ -1,0 +1,131 @@
+#!/bin/sh
+
+# TODO: Port to the fabfile.
+
+#
+# Dirty, quick, easy.
+#
+
+# This script is not necessary, but it can be useful if you have many nodes that
+# need patching and you lack any kind of updated repository. Essentially what it
+# does is pick a singular host, updates it, turns the downloaded packages into a
+# repository and configures all other nodes to point to the "updated" one. This
+# way you only download the latest updates once. This is good because in an env-
+# ironment that is constantly changing, we might not have the luxury of a local
+# mirror.
+
+. ./configure.sh
+
+[ -f /tmp/serverlist ]      && > /tmp/serverlist
+[ -f /tmp/update_these ]    && > /tmp/update_these
+[ -d /tmp/output ]          && rm -rf /tmp/output
+
+declare -a update_these
+declare -a servers
+declare -a already_updated
+
+#
+# Turn back now if your terminal isn't greater than 80 cols wide
+#
+TOGGLE="'s/keepcache=0/keepcache=1/g;s/plugins=1/plugins=0/g'"
+_pssh "sed -i ${TOGGLE} /etc/yum.conf"
+_pssh -o /tmp/output "yum check-update | wc -l" > /dev/null 2>&1
+cd /tmp/output
+for s in *; do
+    printf "INFO: Determining if $s needs to be part of the update pool..."
+    if [ $(cat $s) -ge 1 ]; then
+        echo "yes"
+        update_these+=($s)
+    else
+        echo "no"
+        already_updated+=($s)
+    fi
+done
+
+if [ ${#update_these} -ge 1 ]; then
+    echo > /tmp/update_these
+    for i in ${update_these[@]}; do
+        echo $i >> /tmp/update_these
+    done
+    
+    echo "INFO: Updating: ${update_these[@]}"
+    echo "INFO: Choosing a candidate to serve the cache"
+    if [ ${#already_updated} -ge 1 ]; then
+        echo "INFO: cache candidates - ${already_updated[@]}"
+        cache_server=${already_updated[$RANDOM%${#already_updated[@]}]}
+    else
+        echo "INFO: Choosing an unupdated host to update first"
+        cache_server=${update_these[$RANDOM%${#update_these[@]}]}
+    fi
+    echo "INFO: Decided on $cache_server as the cache server"
+
+    
+    echo "INFO: Creating remote repository directory structure"
+    ssh -lroot $cache_server \
+        "[ ! -d /tmp/tmprepo ] && mkdir -p /tmp/tmprepo/"
+    echo "INFO: Syncing cached packages to temporary repo location"
+    ssh -lroot $cache_server \
+        "[ ! -d /tmp/tmprepo/x86_64 ] && \
+            rsync -Parv /var/cache/yum/x86_64 /tmp/tmprepo/"
+    echo "INFO: running createrepo"
+    ssh -lroot $cache_server \
+        "[ ! -d /tmp/tmprepo/repodata ] && cd /tmp/tmprepo; createrepo ."
+    echo "INFO: Starting a python web server on port 777"
+    ssh -lroot $cache_server \
+        "screen -ls | grep tmprepo >/dev/null 2>&1 || \
+            cd /tmp/tmprepo; screen -dmS tmprepo python -m SimpleHTTPServer 777"
+    
+    echo "INFO: Setting up clients for a temporary repo"
+    
+    echo "INFO: Moving current repo files"
+    pssh -h /tmp/update_these -lroot -t0 \
+        "mkdir ~/repo_save; mv /etc/yum.repos.d/*.repo ~/repo_save" 
+    echo "INFO: Sending file to clients"
+    pssh -h /tmp/update_these -lroot -t0 \
+        "cat << EOT > /etc/yum.repos.d/tmprepo.repo
+[base]
+name=CentOS-\$releasever - Basement
+baseurl=http://${cache_server}:777/
+gpgcheck=0
+
+[updates]
+name=CentOS-\$releasever - Basement - updates
+baseurl=http://${cache_server}:777/
+gpgcheck=0
+EOT"
+    
+    echo "INFO: Running yum updates"
+    pssh -h /tmp/update_these \
+        -o /tmp/output \
+        -e /tmp/errors \
+        -P \
+        -t0 \
+        -lroot "yum clean all; yum update -y"
+else
+    echo "INFO: All servers are up to date and patched. Cleaning up"
+fi
+
+echo "INFO: Cleaning repositories and resetting them to default"
+pssh -t0 \
+    -h /tmp/update_these \
+    -l root \
+    -t0 "rm -f /etc/yum.repos.d/tmprepo.repo; \
+        mv /root/repo_save/*.repo /etc/yum.repos.d/; \
+        rmdir /root/repo_save; yum clean all" > /dev/null 2>&1
+
+echo "INFO: stopping the web server and removing the temporary repo"
+pssh -t0 \
+    -h /tmp/serverlist \
+    -l root \
+    -t0 "screen -ls | grep tmprepo &&\
+         { kill \$(screen -ls | grep tmprepo | cut -d. -f1); \
+         rm -rf /tmp/tmprepo; yum clean all; }" > /dev/null 2>&1
+
+echo "INFO: resetting yum.conf to sane defaults"
+pssh -t0 \
+    -h /tmp/serverlist \
+    -l root \
+    -t0 "sed -i 's/keepcache=1/keepcache=0/g;s/plugins=0/plugins=1/g' \
+        /etc/yum.conf" > /dev/null 2>&1
+
+echo "INFO: Finished"

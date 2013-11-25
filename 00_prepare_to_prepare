@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Ported to the fabfile
+
+# What are you preparing? You're always preparing!! Just go!
+
+. ./configure.sh
+
+if [[ ${#servers[@]} -eq 0 ]]; then # If this array isn't populated then we are
+                                    # likely using python pssh
+    if [[ $(_pssh "true" 2>&1 | grep -v SUCCESS | wc -l) -ge 1 ]]; then
+        _die "FATAL: You are not able to connect to at least one hypervisor"
+        _die "FATAL: Public key authentication must be set up"
+        _die "FATAL: Exiting"
+        exit 1
+    fi
+fi
+
+echo "INFO: Success - got to the end of all the tests without exiting"
+echo "INFO: Setting hostnames"
+
+
+_pssh -P "O4=\$(ip a sh dev br0 | \
+    awk '/inet /{gsub(\"/.*\",\"\"); split(\$2,a,\".\"); print a[4]}'); \
+    sed -i 's/localhost.localdomain/sys'\$O4'.ghetto.sh'/g \
+        /etc/sysconfig/network /etc/hosts; hostname sys\${O4}.ghetto.sh"
+
+_pssh -P "grep -E ^host_uuid /etc/libvirt/libvirtd.conf || \
+    echo host_uuid=\$(uuidgen) >> /etc/libvirt/libvirtd.conf; \
+    service libvirtd restart"
+
+_pssh -P "cat /etc/sysconfig/network /etc/hosts"
+

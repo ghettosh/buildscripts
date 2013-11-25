@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# Ported to the fabfile
+
+# This script will attempt to install necessary repositories
+# and any dependencies you list here that didn't make it into
+# the kickstart script.
+
+. ./configure.sh
+
+# If you want to use a different epel
+EBASEURL=http://mirror.oss.ou.edu/
+EREPOPATH=/epel/6/x86_64/epel-release-6-8.noarch.rpm
+EPEL=${EBASEURL}${EREPOPATH}
+
+# If you want to use a different version of gluster
+GBASEURL=http://download.gluster.org/
+BREPOPATH=/pub/gluster/glusterfs/LATEST/RHEL/glusterfs-epel.repo
+GLUSTER=${GBASEURL}${GREPOPATH}
+
+echo "INFO: Installing epel repo"
+_pssh "rpm -qa | egrep \"epel-release\" || rpm -Uvh ${EPEL}"
+
+echo "INFO: Installing gluster repository"
+_pssh "cd /etc/yum.repos.d && ls *gluster* || wget ${GLUSTER}"

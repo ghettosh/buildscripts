@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+# Ghetto PSSH !
+# Works anywhere
+# Cleans your house
+# Is generally awesome when you don't have python or ruby or perl
+# 
+# Unfortunately I'm not going to be using it for much longer
+
+# $1 is the commandto run on the remote hosts
+# $2 is the (optional) number of concurrent connections to use
+
+# TODO:
+# Generate host list from hypervisors.txt:
+# Tie TMPFILE in the subshell below into trap, to ensure 
+# that cleanup works when working with /23 or greater
+
+# . ./configure.sh
+
+trap "[ -d /tmp/.pssh ] && { rm -rf /tmp/.pssh; }" SIGINT SIGTERM
+[ ! -d /tmp/.pssh ] && mkdir /tmp/.pssh
+
+function usage(){
+    echo -e "\nUsage: $0 \"command\" [threads]"
+    echo -e "Example: $0 \"date\" 4\n"
+}
+
+function _green(){
+    echo -e "\033[1;32m$@\033[0m"
+}
+
+function _red(){
+    echo -e "\033[1;31m$@\033[0m"
+}
+
+servers=( 192.168.0.10{2..5} 192.168.0.234 )
+
+if [[ ${#servers[@]} -eq 0 ]]; then
+    _die "FATAL: you don't have parallel-ssh; that's okay"
+    _die "FATAL: edit gpssh and set the servers array"
+    _die "FATAL: e.g. servers=( 192.168.50.{50..150} 192.168.50.199 )"
+    exit 1
+fi
+
+if [ $# -eq 1 ]; then
+    threads=${#servers[@]}
+elif [[ $2 =~ [0-9]+ ]]; then
+    threads=$2
+    if [ $threads -ge ${#servres} ]; then
+        threads=${#servers[@]}
+    fi
+else
+    usage
+    exit 1
+fi
+
+nthreads=0;
+pool=()
+for s in ${servers[@]}
+  do
+    if [ $nthreads -eq $threads ]; then
+        for job in ${pool[@]}; do
+              wait $job;
+        done
+        pool=()
+        nthreads=0
+    fi
+    (
+        TMPFILE=`mktemp`
+        ssh root@$s "$1" 2>&1 > $TMPFILE 
+        if [ $? -ne 0 ]; then
+            echo -e "[\033[31m$s\033[0m]: failed"
+            continue
+        fi
+        while read L; do
+            echo -e "[\033[32m$s\033[0m]:\t$L"
+        done < $TMPFILE
+        rm -f $TMPFILE
+    )& pool[$nthreads]=$!
+    (( nthreads++ ))
+done
+
+for job in ${pool[@]}; do
+    wait $job;
+done
