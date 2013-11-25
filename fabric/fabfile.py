@@ -1,6 +1,7 @@
-from fabric.api import run, env, cd, put, local
 import urllib
 from os import path
+from time import sleep
+from fabric.api import run, env, cd, put, local
 
 hvlist = []
 for i in range(2,6): hvlist.append('sys10' + str(i))
@@ -8,9 +9,10 @@ for i in range(2,6): hvlist.append('sys10' + str(i))
 env.hosts = hvlist
 env.user  = 'root'
 
+
 def step00():
     """
-    verify connectivity and access, insert pubkey
+    verify connectivity and access
     """
 # This functionality was put into the kickstart
     #keyniko = 'paste your ssh pub key here'
@@ -97,10 +99,44 @@ def step03():
     """
     local('echo to do...')
 
+def step04():
+    """
+    install and configure glusterd, probe all the peers
+    """
+    local('echo to do...')
+
+def step05():
+    """
+    partition, format and mount usb drives
+    """
+    local('echo to do...')
+
+def step06():
+    """
+    create gluster volumes from usb drives
+    """
+    local('echo to do...')
+
+def step07():
+    """
+    create libvirt resources from gluster volumes
+    """
+    local('echo to do...')
+
+def step08():
+    """
+    create bridge on specified vm bridge, and make it a libvirt resource
+    """
+    local('echo to do...')
+
+
+### The nuclear option ###
+
 def step99():
     """
     zero out the mbr and force a re-kick. Use with care!!
     """
-    run('dd if=/dev/zero of=/dev/sda bs=512 count=4')
+    sleep(5)
+    run('dd if=/dev/zero of=/dev/sda bs=512 count=1')
     run('sync')
     run('reboot')
