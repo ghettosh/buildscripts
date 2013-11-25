@@ -1,0 +1,26 @@
+!
+interface Port-channel1
+ description etherchannel-sys105
+ switchport
+ switchport access vlan 20
+ switchport mode access
+!
+interface Port-channel3
+ description etherchannel-sys104
+ switchport
+ switchport access vlan 20
+ switchport mode access
+!
+interface Port-channel5
+ description etherchannel-sys103
+ switchport
+ switchport access vlan 20
+ switchport mode access
+!
+interface Port-channel7
+ description etherchannel-sys102
+ switchport
+ switchport access vlan 20
+ switchport mode access
+!
+

@@ -1,0 +1,78 @@
+!
+!
+! sys105 - po1
+!
+interface GigabitEthernet1/1
+ switchport access vlan 20
+ switchport mode access
+ channel-group 1 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+interface GigabitEthernet1/2
+ switchport access vlan 20
+ switchport mode access
+ channel-group 1 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+!
+! sys104 - po3
+!
+interface GigabitEthernet1/3
+ switchport access vlan 20
+ switchport mode access
+ channel-group 3 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+interface GigabitEthernet1/4
+ switchport access vlan 20
+ switchport mode access
+ channel-group 3 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+!
+! sys103 - po5
+!
+interface GigabitEthernet1/5
+ switchport access vlan 20
+ switchport mode access
+ channel-group 5 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+interface GigabitEthernet1/6
+ switchport access vlan 20
+ switchport mode access
+ channel-group 5 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+!
+! sys102 - po7
+!
+interface GigabitEthernet1/7
+ switchport access vlan 20
+ switchport mode access
+ channel-group 7 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+interface GigabitEthernet1/8
+ switchport access vlan 20
+ switchport mode access
+ channel-group 7 mode active
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ spanning-tree guard loop
+!
+

@@ -1,0 +1,48 @@
+Switch#sh vlan bri             
+
+VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active    Gi1/9, Gi1/10, Gi1/11, Gi1/12, Gi1/13, Gi1/14, Gi1/15, Gi1/16, Gi1/34
+                                                Gi1/35, Gi1/36, Gi1/37, Gi1/38, Gi1/39, Gi1/40, Gi1/41, Gi1/42, Gi1/43
+                                                Gi1/44, Gi1/45, Gi1/46, Gi1/47, Gi1/48
+2    secure                           active    
+10   vmnet                            active    Gi1/17, Gi1/18, Gi1/19, Gi1/20, Gi1/21, Gi1/22, Gi1/23, Gi1/24, Gi1/25
+                                                Gi1/26, Gi1/27, Gi1/28, Gi1/29, Gi1/30, Gi1/31, Gi1/32
+20   storage                          active    Po1, Po3, Po5, Po7
+
+Switch#sh run int vlan1
+Building configuration...
+
+Current configuration : 62 bytes
+!
+interface Vlan1
+ ip address 172.16.0.253 255.255.255.0
+end
+
+Switch#sh run int vlan2
+Building configuration...
+
+Current configuration : 62 bytes
+!
+interface Vlan2
+ ip address 172.16.2.253 255.255.255.0
+end
+
+Switch#sh run int vlan10
+Building configuration...
+
+Current configuration : 65 bytes
+!
+interface Vlan10
+ ip address 192.168.10.253 255.255.255.0
+end
+
+Switch#sh run int vlan20 
+Building configuration...
+
+Current configuration : 65 bytes
+!
+interface Vlan20
+ ip address 192.168.20.253 255.255.255.0
+end
+
