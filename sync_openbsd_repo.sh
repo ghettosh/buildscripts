@@ -2,13 +2,18 @@
 
 # Quick and ugly
 # 
+# TODO:
+#   * Add support for an array of arches
 
 declare -A files
 declare -a flavors
 declare -a arches
 declare -a supported
-CURL=`which curl` || { echo "FATAL: You need curl to continue"; exit 1; }
-SHA256SUM=`which sha256sum` || SHA256SUM=`which sha256` || { echo "FATAL: you need sha256sum to continue"; exit 1; }
+CURL=`which curl` > /dev/null 2>&1 \
+    || { echo "FATAL: You need curl to continue"; exit 1; }
+SHA256SUM=`which sha256sum` > /dev/null 2>&1 \
+    || SHA256SUM=`which sha256` \
+        || { echo "FATAL: you need sha256sum to continue"; exit 1; }  
 
 arches=( amd64 i386 )
 flavors=( 5.4 5.3 snapshots )

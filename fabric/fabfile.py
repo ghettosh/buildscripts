@@ -39,7 +39,8 @@ def step00():
     # run('if [ -f /tmp/.bondchanged ]; then \
     #     ifdown bond0 && ifup bond0; rm -f /tmp/.bondchanged; fi')
     # run(cmd)
-    run('uname -a;ifconfig bond0')
+
+    run('uname -a; ip address show')
 
 def step01():
     """
