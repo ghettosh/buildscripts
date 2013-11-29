@@ -14,7 +14,7 @@ def step00():
     """
     verify connectivity and access
     """
-# This functionality was put into the kickstart
+    # This functionality was put into the kickstart
     #keyniko = 'paste your ssh pub key here'
     #pubkeys = [ keyniko ]
     #run('uname -s')
@@ -70,8 +70,8 @@ def step02():
         print "downloading latest epel"
         urllib.urlretrieve(epelrpm, targetpath + epel)
 
-    gluster_url  = 'http://download.gluster.org/'
-    gluster_path = '/pub/gluster/glusterfs/LATEST/RHEL/glusterfs-epel.repo'
+    gluster_url  = 'http://download.gluster.org/pub/gluster'
+    gluster_path = '/glusterfs/LATEST/RHEL/glusterfs-epel.repo'
     glusterrepo  = gluster_url + gluster_path
     gluster      = './files/latest-gluster.repo'
 
@@ -105,16 +105,46 @@ def step04():
     """
     install and configure glusterd, probe all the peers
     """
-    local('echo to do...')
     run('yum install -y glusterfs glusterfs-server')
     run('chkconfig glusterd on')
-    run('service glusterd start')
+    run('service glusterd status || service glusterd restart')
 
 def step05():
     """
     partition, format and mount usb drives
     """
-    local('echo to do...')
+    # TODO: Figure out a better way to verify that sdb and sdc are the 
+    # right disks to target
+    disks = {}
+    disks['sdb'] = 'IMG'
+    disks['sdc'] = 'ISO'
+    for disk in disks:
+        # if the directory is busy for any reason, give the user a 
+        # chance to manually go in and fix it; as any busy devices will
+        # stall future steps
+        umount_cmd = '''if mount | grep "^/dev/{d}1 "; then
+            UMOUNTED=0; while [ $UMOUNTED -eq 0 ]; do 
+                umount /dev/{d}1 && UMOUNTED=1; 
+                sleep 1; 
+            done;
+        fi'''.format(d=disk)
+        run(umount_cmd)
+        fn = disk + '.sfdisk'
+        label = disks[disk]
+        target_dir = '/' + label.lower() + 'Brick'
+        localfile = 'files/' + fn
+        remotefile = '/tmp/' + fn
+        put(localfile, '/tmp')
+        run('sfdisk -f /dev/{d} < {r}'.format(
+			d=disk,r=remotefile))
+        run('mkfs.xfs -f -i size=512 -L {l} /dev/{d}1'.format(
+			l=label,d=disk))
+        fstab_command = '''grep ^LABEL={l} /etc/fstab || \
+        echo -e "LABEL={l}\t{t}\txfs\tnoatime,defaults\t1 1" >> \
+        /etc/fstab'''.format(l=label,t=target_dir)
+        run(fstab_command)
+        run('mkdir -p {d} > /dev/null 2>&1'.format(d=target_dir))
+        run('mount {d}'.format(d=target_dir))
 
 def step06():
     """
