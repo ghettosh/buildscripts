@@ -98,12 +98,16 @@ def step03():
     Run a full yum update, but create a temporary local cache to do it
     """
     local('echo to do...')
+    run('yum update -y')
 
 def step04():
     """
     install and configure glusterd, probe all the peers
     """
     local('echo to do...')
+    run('yum install -y glusterfs glusterfs-server')
+    run('chkconfig glusterd on')
+    run('service glusterd start')
 
 def step05():
     """
