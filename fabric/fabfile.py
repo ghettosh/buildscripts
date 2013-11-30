@@ -28,22 +28,6 @@ def step00():
         #cmd += ' grep {k} /root/.ssh/authorized_keys ||'.format(k=keyid)
         #cmd += ' echo \"{k}\" >> /root/.ssh/authorized_keys'.format(k=key)
         #run(cmd)
-
-    # Attention: After getting a new switch, I no longer have this problem
-    # So the kickstart with an LACP bond wasn't working. I've taken to simply using
-    # balance-rr in the kickstart config and then changing it to an 802.3ad bond here
-    # bondconf = '/etc/sysconfig/network-scripts/ifcfg-bond0'
-    # cmd = 'grep balance-rr {b} > /dev/null 2>&1; if [ $? -eq 0 ]; then '.format(
-    #     b=bondconf)
-    # cmd += ' touch /tmp/.bondchanged;'
-    # cmd += ' sed -i "s/balance-rr/4 miimon=100 lacp_rate=1/g" {b};'.format(
-    #     b=bondconf)
-    # cmd += ' fi'
-    # run(cmd) 
-    # run('if [ -f /tmp/.bondchanged ]; then \
-    #     ifdown bond0 && ifup bond0; rm -f /tmp/.bondchanged; fi')
-    # run(cmd)
-
     run('uname -a; ip address show')
 
 def step01():
@@ -216,7 +200,7 @@ def step07():
     for vol in gvols:
         vname = vol
         vtarget = gvols[vol]
-        fstab_line = '{th}:/{v} {vt} '.format(th=target_host,v=vname,vt=vtarget)
+        fstab_line = '{th}:/{v} {vt}'.format(th=target_host,v=vname,vt=vtarget)
         fstab_line += ' glusterfs '
         fstab_line += ' rw,default_permissions,allow_other,max_read=131072 '
         fstab_line += ' 0 0 '
@@ -225,7 +209,6 @@ def step07():
         echo "{l}" >> /etc/fstab'''.format(vt=vtarget,l=fstab_line)
         run(cmd)
         run('mount {vt}'.format(vt=vtarget))
-        
     run('df -h')
 
 def step08():
@@ -241,8 +224,8 @@ def step99():
     """
     zero out the mbr and force a re-kick. Use with care!!
     """
-    # TODO: Add a sha256 hash sum verification of the dd binary to ensure no one 
-    # has overwritten it with a malicious one. Or just rsync a trusted one over.
+    # TODO: Add sha256 hash sum verification of the dd binary to ensure no one 
+    # has overwritten it with a malicious one. Or just rsync a trusted one
     run('dd if=/dev/zero of=/dev/sda bs=512 count=1')
     run('sync')
     run('reboot')
