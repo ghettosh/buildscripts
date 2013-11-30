@@ -187,10 +187,13 @@ def step06():
         ip = '192.168.20.'+ str(peer[3:])
         run('gluster peer probe {i}'.format(i=ip))
     for vol in mounts:
+        # Configurable: change gluster options; by default a
+        # distributed replicated volume is created, but if you just
+        # don't care, a distributed volume could be useful.
         brick_string =  ' '.join([ i + vol for i in  bricks ])
         build_volume_cmd = 'gluster volume create '
         build_volume_cmd += mounts[vol]
-        build_volume_cmd += ' replica {n} '.format(n=str(len(env.hosts)))
+        build_volume_cmd += ' replica {n} '.format(n=str(len(env.hosts) / 2))
         build_volume_cmd += ' transport tcp '
         build_volume_cmd += brick_string
         run(build_volume_cmd)
