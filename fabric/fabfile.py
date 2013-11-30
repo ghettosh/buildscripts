@@ -1,6 +1,5 @@
 import urllib
 from os import path
-from time import sleep
 from fabric.api import run, env, cd, put, local
 
 hvlist = []
@@ -171,7 +170,6 @@ def step99():
     """
     zero out the mbr and force a re-kick. Use with care!!
     """
-    sleep(5)
     run('dd if=/dev/zero of=/dev/sda bs=512 count=1')
     run('sync')
     run('reboot')
