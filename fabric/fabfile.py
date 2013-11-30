@@ -1,13 +1,18 @@
 import urllib
 from os import path
-from fabric.api import run, env, cd, put, local
+import random
+from fabric.api import run, env, cd, put, local, hosts
+
+# read this: this fabfile expects all hosts to have a hostname
+#  that looks like 'sys[nnn], where 'nnn' is the intended 3rd octet
+#  of that host's various ips
 
 hvlist = []
+# [ sys102, sys103, etc... ]
 for i in range(2,6): hvlist.append('sys10' + str(i))
 
 env.hosts = hvlist
 env.user  = 'root'
-
 
 def step00():
     """
@@ -145,11 +150,20 @@ def step05():
         run('mkdir -p {d} > /dev/null 2>&1'.format(d=target_dir))
         run('mount {d}'.format(d=target_dir))
 
+@hosts(random.choice(hvlist))
 def step06():
     """
     create gluster volumes from usb drives
     """
-    local('echo to do...')
+    hosts = env.hosts
+    for peer in hosts:
+        # in our environment, the last 3 characters in the hostname are the 
+        # last octet upon which they will occupy on their networks.
+        # Not sure what we'll do when we have more than 100 hosts, but 
+        # faced with the choice of running this through re, or changing all
+        # the hostnames to include a delimiter, i'll go this way.
+        ip = '192.168.20.'+ str(peer[3:])
+        run('gluster peer probe {i}'.format(i=ip))
 
 def step07():
     """
