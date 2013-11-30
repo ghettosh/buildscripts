@@ -169,10 +169,15 @@ def step06():
     """
     create gluster volumes from usb drives
     """
+    # to "clean up" after volume deletes, follow this example:
+    # rm -rf isoBrick/.glusterfs
+    # setfattr -x trusted.glusterfs.volume-id  /isoBrick
+    # setfattr -x trusted.gfid /isoBrick
+    # random sleep%30, service glusterd restart
     bricks = []
     mounts = {}
     # Configurable: add bricks here
-    #    path to brick    name of gluster volume
+    # mounts['path to brick on disk'] = 'name of gluster volume'
     mounts['/isoBrick'] = 'iso'
     mounts['/imgBrick'] = 'img'
     hosts = env.hosts
