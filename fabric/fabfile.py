@@ -50,20 +50,30 @@ def step01():
     """
     Set hostnames and ensure a unique uuid is set for libvirtd
     """
+    # Configurable:
+    # master_if = the interface that all future interfaces will copy their
+    #  4th octet from
+    # domain_name = the domain name the hosts will use as their hostname 'foo'
+    # hostname_prefix = [prefix][4th octet].[domain name]
+    master_if = 'bond0'
+    domain_name = 'ghetto.sh'
+    hostname_prefix = 'sys'
     set_hostname_command = '''
-    O4=$(ip a sh dev bond0 | 
+    O4=$(ip a sh dev %s | 
     awk '/inet /{gsub("/.*",""); split($2,a,"."); print a[4]}'); 
-    hostname sys${O4}.ghetto.sh;
+    hostname %s${O4}.%s;
     sed -i "s/unconfigured/sys${O4}/g" \
         /etc/sysconfig/network /etc/sysconfig/network-scripts/ifcfg-*;
-    '''
-    run(set_hostname_command)
+    ''' % (master_if,hostname_prefix,domain_name)
+    run('echo {s}'.format(s=set_hostname_command))
+    # run(set_hostname_command)
 
 def step02():
     """
     Install extra repos, glusterfs and openvswitch
     """
-
+    # Configurable: change or add rpm/.repo files here - e.g. rpmforge
+    # or mycustom.repo
     targetpath = './files/'
     epel_url  = 'http://mirror.oss.ou.edu/'
     epel_path = '/epel/6/x86_64/epel-release-6-8.noarch.rpm'
@@ -118,7 +128,11 @@ def step05():
     partition, format and mount usb drives
     """
     # TODO: Figure out a better way to verify that sdb and sdc are the 
-    # right disks to target
+    # right disks to target. Also add support for identifying disks in
+    # ways other than their device id, which may change under certain 
+    # conditions.
+    # Configurable: add disk -> label mapping here
+    #     disk      label
     disks = {}
     disks['sdb'] = 'IMG'
     disks['sdc'] = 'ISO'
@@ -155,7 +169,15 @@ def step06():
     """
     create gluster volumes from usb drives
     """
+    bricks = []
+    mounts = {}
+    # Configurable: add bricks here
+    #    path to brick    name of gluster volume
+    mounts['/isoBrick'] = 'iso'
+    mounts['/imgBrick'] = 'img'
     hosts = env.hosts
+    for h in hosts: bricks.append('192.168.20.' + h[3:] + ':')
+
     for peer in hosts:
         # in our environment, the last 3 characters in the hostname are the 
         # last octet upon which they will occupy on their networks.
@@ -164,6 +186,15 @@ def step06():
         # the hostnames to include a delimiter, i'll go this way.
         ip = '192.168.20.'+ str(peer[3:])
         run('gluster peer probe {i}'.format(i=ip))
+    for vol in mounts:
+        brick_string =  ' '.join([ i + vol for i in  bricks ])
+        build_volume_cmd = 'gluster volume create '
+        build_volume_cmd += mounts[vol]
+        build_volume_cmd += ' replica {n} '.format(n=str(len(env.hosts)))
+        build_volume_cmd += ' transport tcp '
+        build_volume_cmd += brick_string
+        run(build_volume_cmd)
+        run('gluster volume start {v}'.format(v=mounts[vol]))
 
 def step07():
     """
@@ -184,6 +215,8 @@ def step99():
     """
     zero out the mbr and force a re-kick. Use with care!!
     """
+    # TODO: Add a sha256 hash sum verification of the dd binary to ensure no one 
+    # has overwritten it with a malicious one. Or just rsync a trusted one over.
     run('dd if=/dev/zero of=/dev/sda bs=512 count=1')
     run('sync')
     run('reboot')
