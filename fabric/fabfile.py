@@ -206,9 +206,27 @@ def step06():
 
 def step07():
     """
-    create libvirt resources from gluster volumes
+    mount and create libvirt resources from gluster volumes
     """
-    local('echo to do...')
+    gvols = {}
+    gvols['iso'] = '/var/lib/libvirt/shared/iso/'
+    gvols['img'] = '/var/lib/libvirt/images/'
+
+    target_host = random.choice(env.hosts)
+    for vol in gvols:
+        vname = vol
+        vtarget = gvols[vol]
+        fstab_line = '{th}:/{v} {vt} '.format(th=target_host,v=vname,vt=vtarget)
+        fstab_line += ' glusterfs '
+        fstab_line += ' rw,default_permissions,allow_other,max_read=131072 '
+        fstab_line += ' 0 0 '
+        run('mkdir -p {vt} > /dev/null 2>&1'.format(vt=vtarget))
+        cmd = '''grep "{vt}" /etc/fstab >/dev/null 2>&1 || \
+        echo "{l}" >> /etc/fstab'''.format(vt=vtarget,l=fstab_line)
+        run(cmd)
+        run('mount {vt}'.format(vt=vtarget))
+        
+    run('df -h')
 
 def step08():
     """
