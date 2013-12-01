@@ -49,8 +49,10 @@ def step01():
     sed -i "s/unconfigured/sys${O4}/g" \
         /etc/sysconfig/network /etc/sysconfig/network-scripts/ifcfg-*;
     ''' % (master_if,hostname_prefix,domain_name)
-    run('echo {s}'.format(s=set_hostname_command))
-    # run(set_hostname_command)
+    run(set_hostname_command)
+    run('''grep ^host_uuid /etc/libvirt/libvirtd.conf || \
+        { echo 'host_uuid = "'$(uuidgen)'"' >> /etc/libvirt/libvirtd.conf; \
+          service libvirtd restart; }''')
 
 def step02():
     """
@@ -194,9 +196,9 @@ def step07():
     """
     gvols = {}
     gvols['iso'] = '/var/lib/libvirt/shared/iso/'
-    gvols['img'] = '/var/lib/libvirt/images/'
-
+    gvols['img'] = '/var/lib/libvirt/shared/images/'
     target_host = random.choice(env.hosts)
+    # Configurable: you can set the gluster mount options here
     for vol in gvols:
         vname = vol
         vtarget = gvols[vol]
@@ -209,6 +211,13 @@ def step07():
         echo "{l}" >> /etc/fstab'''.format(vt=vtarget,l=fstab_line)
         run(cmd)
         run('mount {vt}'.format(vt=vtarget))
+        libvirt_name = 'glusterDisk-{v}'.format(v=vname)
+        # maybe one day I'll figure out how to actually use the glusterfs
+        # pool fs type... but that day is not today!
+        run('''virsh pool-list --all | egrep {n} > /dev/null 2>&1 ||\
+             virsh pool-define-as {n} dir {vt};
+             virsh pool-autostart {n};
+             virsh pool-start {n}'''.format(n=libvirt_name,vt=vtarget)
     run('df -h')
 
 def step08():
